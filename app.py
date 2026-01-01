@@ -80,17 +80,19 @@ if prompt or uploaded_file:
                 "Si hay una imagen, lee los nombres de las canciones."
             )
 
-            contenido_para_ia = [instruccion]
-
-            if prompt:
-                contenido_para_ia.append(f"El usuario dice: {prompt}")
-
+            # =========================
+            # CONTENIDO CORRECTO PARA GEMINI
+            # =========================
             if uploaded_file:
                 imagen = Image.open(uploaded_file)
-                contenido_para_ia.append(imagen)
-                contenido_para_ia.append(
-                    "Estas son canciones del usuario. Analiza su energía emocional."
-                )
+                contenido_para_ia = [
+                    instruccion,
+                    imagen
+                ]
+            else:
+                contenido_para_ia = [
+                    f"{instruccion}\n\nEl usuario dice: {prompt}"
+                ]
 
             # 🔮 Llamada a Gemini
             response = model.generate_content(contenido_para_ia)
