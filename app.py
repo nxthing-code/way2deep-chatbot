@@ -2,85 +2,102 @@ import streamlit as st
 import google.generativeai as genai
 from PIL import Image
 
-# 1. Configuración de la página
+# =====================================================
+# CONFIGURACIÓN DE GEMINI (API KEY DESDE STREAMLIT CLOUD)
+# =====================================================
+# ⚠️ NO pegues aquí tu API Key
+# Streamlit la lee automáticamente desde Settings → Secrets
+genai.configure(api_key=st.secrets["GOOGLE_API_KEY"])
+
+# =========================
+# CONFIGURACIÓN DE LA PÁGINA
+# =========================
 st.set_page_config(page_title="Self-Discovery AI", page_icon="✨")
+
 st.title("✨ Descubre tu Máximo Potencial")
 st.markdown("""
 Analiza tu vibración actual a través de la música.  
-**Escribe tus canciones favoritas** o **sube una captura de pantalla** para descubrir tus fortalezas.
+**Escribe tus canciones favoritas** o **sube una captura de pantalla**  
+para descubrir tus fortalezas y tu estado emocional.
 """)
 
-# 2. Barra lateral para la API Key
-api_key = st.sidebar.text_input("Introduce tu Gemini API Key:", type="password")
 st.sidebar.info("Espacio de entretenimiento para el autoconocimiento.")
 
-if api_key:
-    try:
-        # ✅ Configuración correcta (sin forzar REST)
-        genai.configure(api_key=api_key)
+# =========================
+# MODELO GEMINI
+# =========================
+model = genai.GenerativeModel("gemini-1.5-flash-latest")
 
-        # ✅ Modelo válido y actualizado
-        model = genai.GenerativeModel("gemini-1.5-flash-latest")
+# =========================
+# HISTORIAL DEL CHAT
+# =========================
+if "messages" not in st.session_state:
+    st.session_state.messages = []
 
-        # Inicializar historial del chat
-        if "messages" not in st.session_state:
-            st.session_state.messages = []
+# Mostrar mensajes anteriores
+for message in st.session_state.messages:
+    with st.chat_message(message["role"]):
+        st.markdown(message["content"])
 
-        # Mostrar mensajes previos
-        for message in st.session_state.messages:
-            with st.chat_message(message["role"]):
-                st.markdown(message["content"])
+# =========================
+# ENTRADA DE TEXTO E IMAGEN
+# =========================
+col1, col2 = st.columns([2, 1])
 
-        # 3. Zona de entrada: Texto e Imagen
-        col1, col2 = st.columns([2, 1])
-        with col1:
-            prompt = st.chat_input("Escribe aquí tus canciones o lo que sientes...")
-        with col2:
-            uploaded_file = st.file_uploader("Sube una captura 📸", type=["png", "jpg", "jpeg"])
+with col1:
+    prompt = st.chat_input("Escribe aquí tus canciones o lo que sientes...")
 
-        # 4. Procesar la interacción
-        if prompt or uploaded_file:
-            user_content = prompt if prompt else "Analiza esta captura de mis canciones."
-            st.session_state.messages.append({"role": "user", "content": user_content})
+with col2:
+    uploaded_file = st.file_uploader(
+        "Sube una captura 📸",
+        type=["png", "jpg", "jpeg"]
+    )
 
-            with st.chat_message("user"):
-                st.markdown(user_content)
-                if uploaded_file:
-                    st.image(uploaded_file, width=200)
+# =========================
+# PROCESAR INTERACCIÓN
+# =========================
+if prompt or uploaded_file:
 
-            with st.chat_message("assistant"):
-                with st.spinner("Analizando tu sintonía..."):
-                    instruccion = (
-                        "Actúa como un guía de potencial personal y autoconocimiento. "
-                        "Analiza las canciones para identificar el estado emocional, "
-                        "fortalezas y cómo alcanzar el máximo potencial. "
-                        "Tono motivador. No eres psicólogo. "
-                        "Si hay imagen, lee los nombres de las canciones."
-                    )
+    user_message = prompt if prompt else "Analiza esta imagen con mis canciones."
+    st.session_state.messages.append({
+        "role": "user",
+        "content": user_message
+    })
 
-                    contenido_para_ia = [instruccion]
+    with st.chat_message("user"):
+        st.markdown(user_message)
+        if uploaded_file:
+            st.image(uploaded_file, width=200)
 
-                    if prompt:
-                        contenido_para_ia.append(f"El usuario dice: {prompt}")
+    with st.chat_message("assistant"):
+        with st.spinner("Analizando tu sintonía..."):
 
-                    if uploaded_file:
-                        img = Image.open(uploaded_file)
-                        contenido_para_ia.append(img)
-                        contenido_para_ia.append(
-                            "Estas son canciones del usuario. Analiza su energía emocional."
-                        )
+            instruccion = (
+                "Actúa como un guía de autoconocimiento y desarrollo personal. "
+                "Analiza las canciones para identificar el estado emocional, "
+                "fortalezas internas y posibles caminos de crecimiento. "
+                "Tono motivador y positivo. No eres psicólogo. "
+                "Si hay una imagen, lee los nombres de las canciones."
+            )
 
-                    # ✅ Llamada correcta a Gemini
-                    response = model.generate_content(contenido_para_ia)
-                    st.markdown(response.text)
+            contenido_para_ia = [instruccion]
 
-                    st.session_state.messages.append({
-                        "role": "assistant",
-                        "content": response.text
-                    })
+            if prompt:
+                contenido_para_ia.append(f"El usuario dice: {prompt}")
 
-    except Exception as e:
-        st.error(f"Error de conexión con Gemini: {e}")
+            if uploaded_file:
+                imagen = Image.open(uploaded_file)
+                contenido_para_ia.append(imagen)
+                contenido_para_ia.append(
+                    "Estas son canciones del usuario. Analiza su energía emocional."
+                )
 
-else:
-    st.warning("Introduce tu API Key en la barra lateral para comenzar.")
+            # 🔮 Llamada a Gemini
+            response = model.generate_content(contenido_para_ia)
+
+            st.markdown(response.text)
+
+            st.session_state.messages.append({
+                "role": "assistant",
+                "content": response.text
+            })
