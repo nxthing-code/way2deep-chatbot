@@ -16,10 +16,10 @@ st.sidebar.info("Espacio de entretenimiento para el autoconocimiento.")
 
 if api_key:
     try:
-        # Configuración técnica para evitar el error 404
+        # CONFIGURACIÓN DEFINITIVA: Forzamos transporte REST para evitar el error 404 de v1beta
         genai.configure(api_key=api_key, transport='rest')
         
-        # Modelo oficial capaz de leer texto e imágenes
+        # Usamos el nombre del modelo estándar para máxima compatibilidad
         model = genai.GenerativeModel('gemini-1.5-flash')
         
         # Inicializar el historial del chat
@@ -40,7 +40,6 @@ if api_key:
 
         # 4. Procesar la interacción
         if prompt or uploaded_file:
-            # Definir contenido del usuario
             user_content = prompt if prompt else "Analiza esta captura de mis canciones."
             st.session_state.messages.append({"role": "user", "content": user_content})
             
@@ -52,7 +51,6 @@ if api_key:
             # Respuesta de la IA
             with st.chat_message("assistant"):
                 with st.spinner("Analizando tu sintonía..."):
-                    # Instrucciones de personalidad
                     instruccion = (
                         "Actúa como un guía de potencial personal y autoconocimiento. "
                         "Analiza las canciones para identificar el estado emocional, "
@@ -60,7 +58,6 @@ if api_key:
                         "No eres psicólogo. Si hay imagen, lee los nombres de las canciones."
                     )
 
-                    # Preparar el envío (texto + imagen si existe)
                     contenido_para_ia = [instruccion]
                     if prompt:
                         contenido_para_ia.append(f"El usuario dice: {prompt}")
@@ -69,7 +66,7 @@ if api_key:
                         contenido_para_ia.append(img)
                         contenido_para_ia.append("Analiza las canciones de esta imagen.")
 
-                    # Generar y mostrar respuesta
+                    # Generar respuesta
                     response = model.generate_content(contenido_para_ia)
                     st.markdown(response.text)
                     st.session_state.messages.append({"role": "assistant", "content": response.text})
