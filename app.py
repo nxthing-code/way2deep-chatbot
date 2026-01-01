@@ -8,10 +8,14 @@ st.title("🧠 Tu Guía Psicológico Personalizado")
 # Aquí pedimos la "Llave" que guardaste en el Paso 1
 api_key = st.sidebar.text_input("Pega aquí tu Gemini API Key:", type="password")
 
+# Configuración robusta de la IA
 if api_key:
-    genai.configure(api_key=api_key)
-    model = genai.GenerativeModel('gemini-1.5-flash')
-
+    try:
+        genai.configure(api_key=api_key)
+        # Usamos la versión más estable del nombre del modelo
+        model = genai.GenerativeModel('gemini-1.5-flash')
+    except Exception as e:
+        st.error(f"Error de configuración: {e}")
     # Inicializar el historial del chat
     if "messages" not in st.session_state:
         st.session_state.messages = []
