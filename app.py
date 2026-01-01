@@ -16,13 +16,13 @@ st.sidebar.info("Espacio de entretenimiento para el autoconocimiento.")
 
 if api_key:
     try:
-        # CONFIGURACIÓN DEFINITIVA: Forzamos transporte REST para evitar el error 404 de v1beta
-        genai.configure(api_key=api_key, transport='rest')
-        
-        # Usamos el nombre del modelo estándar para máxima compatibilidad
-        model = genai.GenerativeModel('gemini-1.5-flash')
-        
-        # Inicializar el historial del chat
+        # ✅ Configuración correcta (sin forzar REST)
+        genai.configure(api_key=api_key)
+
+        # ✅ Modelo válido y actualizado
+        model = genai.GenerativeModel("gemini-1.5-flash-latest")
+
+        # Inicializar historial del chat
         if "messages" not in st.session_state:
             st.session_state.messages = []
 
@@ -42,36 +42,45 @@ if api_key:
         if prompt or uploaded_file:
             user_content = prompt if prompt else "Analiza esta captura de mis canciones."
             st.session_state.messages.append({"role": "user", "content": user_content})
-            
+
             with st.chat_message("user"):
                 st.markdown(user_content)
                 if uploaded_file:
                     st.image(uploaded_file, width=200)
 
-            # Respuesta de la IA
             with st.chat_message("assistant"):
                 with st.spinner("Analizando tu sintonía..."):
                     instruccion = (
                         "Actúa como un guía de potencial personal y autoconocimiento. "
                         "Analiza las canciones para identificar el estado emocional, "
-                        "fortalezas y cómo alcanzar el máximo potencial. Tono motivador. "
-                        "No eres psicólogo. Si hay imagen, lee los nombres de las canciones."
+                        "fortalezas y cómo alcanzar el máximo potencial. "
+                        "Tono motivador. No eres psicólogo. "
+                        "Si hay imagen, lee los nombres de las canciones."
                     )
 
                     contenido_para_ia = [instruccion]
+
                     if prompt:
                         contenido_para_ia.append(f"El usuario dice: {prompt}")
+
                     if uploaded_file:
                         img = Image.open(uploaded_file)
                         contenido_para_ia.append(img)
-                        contenido_para_ia.append("Analiza las canciones de esta imagen.")
+                        contenido_para_ia.append(
+                            "Estas son canciones del usuario. Analiza su energía emocional."
+                        )
 
-                    # Generar respuesta
+                    # ✅ Llamada correcta a Gemini
                     response = model.generate_content(contenido_para_ia)
                     st.markdown(response.text)
-                    st.session_state.messages.append({"role": "assistant", "content": response.text})
+
+                    st.session_state.messages.append({
+                        "role": "assistant",
+                        "content": response.text
+                    })
 
     except Exception as e:
-        st.error(f"Error de conexión: {e}")
+        st.error(f"Error de conexión con Gemini: {e}")
+
 else:
     st.warning("Introduce tu API Key en la barra lateral para comenzar.")
