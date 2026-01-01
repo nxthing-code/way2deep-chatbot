@@ -16,9 +16,8 @@ st.sidebar.info("Espacio de entretenimiento para el autoconocimiento.")
 
 if api_key:
     try:
-        genai.configure(api_key=api_key)
-        # ESTA ES LA LÍNEA CLAVE CORREGIDA:
-        model = genai.GenerativeModel('models/gemini-1.5-flash')
+        genai.configure(api_key=api_key):
+        model = genai.GenerativeModel(model_name='models/gemini-1.5-flash') (Nota: Usar model_name=
         
         if "messages" not in st.session_state:
             st.session_state.messages = []
