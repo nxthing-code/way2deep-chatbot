@@ -18,12 +18,12 @@ if "GOOGLE_API_KEY" not in st.secrets:
 api_key = st.secrets["GOOGLE_API_KEY"]
 genai.configure(api_key=api_key, transport="rest")
 
-# --- 3️⃣ Seleccionar automáticamente el primer modelo compatible
+# --- 3️⃣ Seleccionar automáticamente el primer modelo disponible
 models = genai.list_models()
-available_models = [m.name for m in models if "generateContent" in m.supported_actions]
+available_models = [m.name for m in models]
 
 if not available_models:
-    st.error("❌ No hay modelos disponibles con soporte generateContent")
+    st.error("❌ No hay modelos disponibles")
     st.stop()
 
 selected_model_name = available_models[0]  # Elegimos el primero automáticamente
@@ -63,17 +63,15 @@ if user_input or uploaded_file:
             )
             contents = [instruction, content_text]
 
-            # Si hay imagen, incluirla
             if uploaded_file:
                 img = Image.open(uploaded_file)
                 contents.append(img)
                 contents.append("Analiza los nombres de canciones en la imagen.")
 
             try:
-                # Generar respuesta
                 result = model.generate_content(contents)
                 answer = result.text if hasattr(result, "text") else str(result)
                 st.markdown(answer)
                 st.session_state.messages.append({"role": "assistant", "content": answer})
             except Exception as err:
-                st.error(f"Error al generar contenido: {err}")    
+                st.error(f"Error al generar contenido: {err}")
