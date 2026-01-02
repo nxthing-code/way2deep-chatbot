@@ -18,19 +18,16 @@ if "GOOGLE_API_KEY" not in st.secrets:
 api_key = st.secrets["GOOGLE_API_KEY"]
 genai.configure(api_key=api_key, transport="rest")
 
-# --- 3️⃣ Listar modelos disponibles con generateContent
-st.sidebar.header("Selecciona modelo para generar contenido")
-available_models = []
-for m in genai.list_models():
-    # Solo mostrar modelos que soporten generateContent
-    if "generateContent" in m.supported_actions:
-        available_models.append(m.name)
+# --- 3️⃣ Seleccionar automáticamente el primer modelo compatible
+models = genai.list_models()
+available_models = [m.name for m in models if "generateContent" in m.supported_actions]
 
 if not available_models:
     st.error("❌ No hay modelos disponibles con soporte generateContent")
     st.stop()
 
-selected_model_name = st.sidebar.selectbox("Modelo:", available_models)
+selected_model_name = available_models[0]  # Elegimos el primero automáticamente
+st.sidebar.info(f"Usando modelo: {selected_model_name}")
 model = genai.GenerativeModel(selected_model_name)
 
 # --- 4️⃣ Historial de chat
@@ -79,4 +76,4 @@ if user_input or uploaded_file:
                 st.markdown(answer)
                 st.session_state.messages.append({"role": "assistant", "content": answer})
             except Exception as err:
-                st.error(f"Error al generar contenido: {err}")
+                st.error(f"Error al generar contenido: {err}")    
