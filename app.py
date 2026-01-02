@@ -2,74 +2,75 @@ import streamlit as st
 import google.generativeai as genai
 from PIL import Image
 
-# 1️⃣ Configuración de la página
-st.set_page_config(page_title="Self-Discovery AI", page_icon="✨")
+# --- 1️⃣ Configuración de la página
+st.set_page_config(page_title="Self‑Discovery AI", page_icon="✨")
 st.title("✨ Descubre tu Máximo Potencial")
 st.markdown("""
 Analiza tu vibración actual a través de la música.  
 **Escribe tus canciones favoritas** o **sube una captura de pantalla** para descubrir tus fortalezas.
 """)
 
-# 2️⃣ Barra lateral para la API Key
-st.sidebar.info("Espacio de entretenimiento para el autoconocimiento.")
-
-# Configura tu API Key
+# --- 2️⃣ Leer API Key desde Secrets
 if "GOOGLE_API_KEY" in st.secrets:
-    genai.configure(api_key=st.secrets["GOOGLE_API_KEY"], transport="rest")
+    api_key = st.secrets["GOOGLE_API_KEY"]
+    genai.configure(api_key=api_key, transport="rest")
 else:
-    st.warning("Introduce tu API Key en Secrets para continuar.")
+    st.warning("⚠️ Añade tu API Key en Streamlit Secrets como GOOGLE_API_KEY")
+    st.stop()
 
-# Modelo seguro y compatible
-model = genai.GenerativeModel('text-bison-001')
+# --- 3️⃣ Modelo compatible con generateContent
+try:
+    model = genai.GenerativeModel("gemini-1.5-flash-latest")
+except Exception as e:
+    st.error(f"Error al inicializar modelo: {e}")
+    st.stop()
 
-# Inicializar historial de chat
+# --- 4️⃣ Historial de mensajes
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
-# Mostrar mensajes previos
-for message in st.session_state.messages:
-    with st.chat_message(message["role"]):
-        st.markdown(message["content"])
+for msg in st.session_state.messages:
+    with st.chat_message(msg["role"]):
+        st.markdown(msg["content"])
 
-# 3️⃣ Zona de entrada: Texto e Imagen
+# --- 5️⃣ Entrada de texto e imagen
 col1, col2 = st.columns([2, 1])
 with col1:
-    prompt = st.chat_input("Escribe aquí tus canciones o lo que sientes...")
+    user_input = st.chat_input("Escribe aquí tus canciones o pensamientos...")
 with col2:
     uploaded_file = st.file_uploader("Sube una captura 📸", type=["png", "jpg", "jpeg"])
 
-# 4️⃣ Procesar la interacción
-if prompt or uploaded_file:
-    user_content = prompt if prompt else "Analiza esta captura de mis canciones."
-    st.session_state.messages.append({"role": "user", "content": user_content})
-    
+# --- 6️⃣ Procesar la solicitud
+if user_input or uploaded_file:
+    content_text = user_input if user_input else "Aquí hay una imagen para analizar canciones."
+    st.session_state.messages.append({"role": "user", "content": content_text})
+
     with st.chat_message("user"):
-        st.markdown(user_content)
+        st.markdown(content_text)
         if uploaded_file:
             st.image(uploaded_file, width=200)
 
-    # Respuesta de la IA
     with st.chat_message("assistant"):
-        with st.spinner("Analizando tu sintonía..."):
-            instruccion = (
-                "Actúa como un guía de potencial personal y autoconocimiento. "
-                "Analiza las canciones para identificar el estado emocional, "
-                "fortalezas y cómo alcanzar el máximo potencial. Tono motivador. "
-                "No eres psicólogo. Si hay imagen, lee los nombres de las canciones."
+        with st.spinner("Analizando…"):
+            # Preparar instrucciones y prompt
+            instruction = (
+                "Actúa como un guía de autoconocimiento. "
+                "Analiza las canciones para identificar emociones, fortalezas y consejos."
             )
+            contents = [instruction, content_text]
 
-            contenido_para_ia = [instruccion]
-            if prompt:
-                contenido_para_ia.append(f"El usuario dice: {prompt}")
+            # Si hay imagen, incluirla
             if uploaded_file:
                 img = Image.open(uploaded_file)
-                contenido_para_ia.append(img)
-                contenido_para_ia.append("Analiza las canciones de esta imagen.")
+                contents.append(img)
+                contents.append("Analiza los nombres de canciones en la imagen.")
 
             try:
-                # Generar respuesta
-                response = model.generate_content(contenido_para_ia)
-                st.markdown(response.text)
-                st.session_state.messages.append({"role": "assistant", "content": response.text})
-            except Exception as e:
-                st.error(f"Error al generar contenido: {e}")
+                # 👉 Generar respuesta
+                result = model.generate_content(contents)
+                answer = result.text if hasattr(result, "text") else str(result)
+                st.markdown(answer)
+
+                st.session_state.messages.append({"role": "assistant", "content": answer})
+            except Exception as err:
+                st.error(f"Error al generar contenido: {err}")
