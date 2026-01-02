@@ -2,40 +2,56 @@ import streamlit as st
 import google.generativeai as genai
 from PIL import Image
 
+# 1. Configuración de la página
 st.set_page_config(page_title="Self-Discovery AI", page_icon="✨")
 st.title("✨ Descubre tu Máximo Potencial")
 
+# Inicializar historial de mensajes si no existe
+if "messages" not in st.session_state:
+    st.session_state.messages = []
+
+# 2. Interfaz lateral
 api_key = st.sidebar.text_input("Introduce tu Gemini API Key:", type="password")
+uploaded_file = st.sidebar.file_uploader("Sube una captura opcional 📸", type=["png", "jpg", "jpeg"])
 
-if api_key:
-    try:
-        # 1. Usamos transporte 'rest' para evitar protocolos v1beta problemáticos
-        genai.configure(api_key=api_key, transport='rest')
+# Mostrar mensajes previos del historial
+for message in st.session_state.messages:
+    with st.chat_message(message["role"]):
+        st.markdown(message["content"])
+
+# 3. Cuadro de chat (Siempre al final para que sea visible)
+if prompt := st.chat_input("Escribe aquí tus canciones o lo que sientes..."):
+    
+    # Mostrar mensaje del usuario inmediatamente
+    st.session_state.messages.append({"role": "user", "content": prompt})
+    with st.chat_message("user"):
+        st.markdown(prompt)
+
+    # 4. Lógica de respuesta de la IA
+    if not api_key:
+        st.error("⚠️ Por favor, introduce tu API Key en la barra lateral para recibir respuesta.")
+    else:
+        try:
+            # Configuración de conexión estable
+            genai.configure(api_key=api_key, transport='rest')
+            model = genai.GenerativeModel('gemini-1.5-flash')
+            
+            with st.chat_message("assistant"):
+                with st.spinner("Analizando tu vibración..."):
+                    # Preparar contenido
+                    instruccion = "Eres un guía de potencial personal. Analiza la música del usuario."
+                    contenido = [instruccion, f"Usuario: {prompt}"]
+                    
+                    if uploaded_file:
+                        img = Image.open(uploaded_file)
+                        contenido.append(img)
+                    
+                    # Generar respuesta
+                    response = model.generate_content(contenido)
+                    st.markdown(response.text)
+                    
+                    # Guardar respuesta en el historial
+                    st.session_state.messages.append({"role": "assistant", "content": response.text})
         
-        # 2. Intentamos el nombre directo sin 'models/'
-        model = genai.GenerativeModel('gemini-1.5-flash')
-        
-        if "messages" not in st.session_state:
-            st.session_state.messages = []
-
-        for message in st.session_state.messages:
-            with st.chat_message(message["role"]):
-                st.markdown(message["content"])
-
-        prompt = st.chat_input("Escribe tus canciones favoritas...")
-        uploaded_file = st.sidebar.file_uploader("Sube una captura", type=["png", "jpg"])
-
-        if prompt or uploaded_file:
-            # Lógica de respuesta igual a la anterior...
-            # (Mantén el resto de tu lógica de procesamiento aquí)
-            pass
-
-    except Exception as e:
-        # Si el 404 persiste, mostramos una lista de lo que TU llave sí puede ver
-        st.error(f"Error: {e}")
-        if "404" in str(e):
-            st.info("Intentando buscar modelos alternativos disponibles para tu cuenta...")
-            modelos = [m.name for m in genai.list_models()]
-            st.write("Modelos disponibles detectados:", modelos)
-else:
-    st.warning("Introduce tu API Key para comenzar.")
+        except Exception as e:
+            st.error(f"Hubo un problema al procesar: {e}")
