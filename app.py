@@ -4,55 +4,71 @@ from groq import Groq
 # 1. Configuración de la página
 st.set_page_config(page_title="Self-Discovery AI", page_icon="✨")
 st.title("✨ Descubre tu Máximo Potencial")
-st.markdown("Analiza tu vibración actual a través de la música (Vía Groq Cloud).")
+st.markdown("---")
 
-# Inicializar historial
+# 2. Gestión de la API Key mediante Secrets
+# Asegúrate de haber configurado 'GROQ_API_KEY' en el panel de Secrets de Streamlit
+try:
+    api_key = st.secrets["GROQ_API_KEY"]
+except Exception:
+    st.error("⚠️ No se encontró la API Key en los Secrets de Streamlit.")
+    st.stop()
+
+# Inicializar historial de mensajes
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
-# 2. Barra lateral para la API Key de Groq
-# Recuerda: Aquí debes pegar la clave que empieza por "gsk_..."
-api_key = st.sidebar.text_input("Introduce tu Groq API Key:", type="password")
+# 3. Barra Lateral (Sidebar)
+with st.sidebar:
+    st.header("Opciones")
+    # Botón para limpiar el chat
+    if st.button("🗑️ Limpiar Conversación"):
+        st.session_state.messages = []
+        st.rerun()
+    
+    st.info("""
+    **Cómo funciona:**
+    Escribe las canciones que más escuchas hoy y la IA analizará tus fortalezas actuales.
+    """)
 
-# Mostrar historial
+# 4. Mostrar historial de mensajes
 for message in st.session_state.messages:
     with st.chat_message(message["role"]):
         st.markdown(message["content"])
 
-# 3. Lógica del Chat
-if prompt := st.chat_input("Escribe tus canciones favoritas..."):
+# 5. Lógica del Chat
+if prompt := st.chat_input("Escribe aquí tus canciones o cómo te sientes..."):
+    
+    # Mostrar mensaje del usuario
     st.session_state.messages.append({"role": "user", "content": prompt})
     with st.chat_message("user"):
         st.markdown(prompt)
 
-    if not api_key:
-        st.error("⚠️ Por favor, introduce tu API Key de Groq en la barra lateral.")
-    else:
-        try:
-            # Inicializar el cliente de Groq
-            client = Groq(api_key=api_key)
-            
-            with st.chat_message("assistant"):
-                with st.spinner("Groq está analizando tu sintonía..."):
-                    # Llamada al modelo Llama 3 (uno de los mejores y más rápidos)
-                    completion = client.chat.completions.create(
-                        model="llama-3.3-70b-versatile",
-                        messages=[
-                            {
-                                "role": "system",
-                                "content": "Eres un experto en psicología musical y potencial personal. Analiza las canciones del usuario para identificar fortalezas y estado emocional. Tono motivador e inspirador."
-                            },
-                            {
-                                "role": "user",
-                                "content": prompt
-                            }
-                        ],
-                    )
-                    
-                    texto_ia = completion.choices[0].message.content
-                    st.markdown(texto_ia)
-                    st.session_state.messages.append({"role": "assistant", "content": texto_ia})
+    try:
+        # Inicializar el cliente de Groq con la clave de los Secrets
+        client = Groq(api_key=api_key)
+        
+        with st.chat_message("assistant"):
+            with st.spinner("Interpretando tu sintonía musical..."):
+                completion = client.chat.completions.create(
+                    model="llama-3.3-70b-versatile",
+                    messages=[
+                        {
+                            "role": "system",
+                            "content": (
+                                "Eres un experto en psicología musical y potencial personal. "
+                                "Tu objetivo es analizar las canciones que el usuario mencione "
+                                "para identificar sus fortalezas, su estado emocional y darle "
+                                "un consejo motivador para alcanzar su máximo potencial hoy."
+                            )
+                        },
+                        {"role": "user", "content": prompt}
+                    ],
+                )
+                
+                texto_ia = completion.choices[0].message.content
+                st.markdown(texto_ia)
+                st.session_state.messages.append({"role": "assistant", "content": texto_ia})
 
-        except Exception as e:
-            st.error(f"Error al conectar con Groq: {e}")
-            st.info("Asegúrate de que tu clave empieza por 'gsk_'")
+    except Exception as e:
+        st.error(f"Hubo un error al procesar tu solicitud: {e}")
