@@ -1,6 +1,7 @@
 import streamlit as st
 import google.generativeai as genai
 from PIL import Image
+import tempfile
 
 # ===============================
 # CONFIGURACIÓN DE GEMINI
@@ -20,8 +21,8 @@ Escribe tus canciones favoritas o sube una captura de pantalla.
 
 st.sidebar.info("Espacio de entretenimiento para el autoconocimiento.")
 
-# ✅ MODELO CORRECTO (CON VISIÓN)
-model = genai.GenerativeModel("gemini-1.5-pro-latest")
+# ✅ MODELO ESTABLE
+model = genai.GenerativeModel("models/gemini-1.5-pro")
 
 # ===============================
 # HISTORIAL
@@ -69,11 +70,26 @@ if prompt or uploaded_file:
                 "y fortalezas internas. Tono motivador. No eres psicólogo."
             )
 
+            # ===============================
+            # 🔥 MANERA CORRECTA DE ENVIAR IMÁGENES
+            # ===============================
             if uploaded_file:
-                image = Image.open(uploaded_file)
-                contenido_para_ia = [instruccion, image]
+                # Guardar la imagen temporalmente
+                with tempfile.NamedTemporaryFile(delete=False, suffix=".png") as tmp:
+                    tmp.write(uploaded_file.getbuffer())
+                    tmp_path = tmp.name
+
+                # Subir archivo a Gemini
+                uploaded_image = genai.upload_file(tmp_path)
+
+                contenido_para_ia = [
+                    instruccion,
+                    uploaded_image
+                ]
             else:
-                contenido_para_ia = [f"{instruccion}\n\nUsuario: {prompt}"]
+                contenido_para_ia = [
+                    f"{instruccion}\n\nUsuario: {prompt}"
+                ]
 
             response = model.generate_content(contenido_para_ia)
 
