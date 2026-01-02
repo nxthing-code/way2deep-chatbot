@@ -1,17 +1,18 @@
 import streamlit as st
-import requests
+from groq import Groq
 
 # 1. Configuración de la página
 st.set_page_config(page_title="Self-Discovery AI", page_icon="✨")
 st.title("✨ Descubre tu Máximo Potencial")
-st.markdown("Analiza tu vibración actual a través de las canciones que escribas.")
+st.markdown("Analiza tu vibración actual a través de la música (Vía Groq Cloud).")
 
 # Inicializar historial
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
-# 2. Entrada de datos
-api_key = st.sidebar.text_input("Introduce tu Gemini API Key:", type="password")
+# 2. Barra lateral para la API Key de Groq
+# Recuerda: Aquí debes pegar la clave que empieza por "gsk_..."
+api_key = st.sidebar.text_input("Introduce tu Groq API Key:", type="password")
 
 # Mostrar historial
 for message in st.session_state.messages:
@@ -25,35 +26,33 @@ if prompt := st.chat_input("Escribe tus canciones favoritas..."):
         st.markdown(prompt)
 
     if not api_key:
-        st.error("⚠️ Por favor, introduce tu API Key en la barra lateral.")
+        st.error("⚠️ Por favor, introduce tu API Key de Groq en la barra lateral.")
     else:
-        with st.chat_message("assistant"):
-            with st.spinner("Conectando con la sabiduría musical..."):
-                # URL forzando la versión estable v1
-                url = f"https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key={api_key}"
-                
-                payload = {
-                    "contents": [{
-                        "parts": [{
-                            "text": f"Actúa como un guía de autoconocimiento. Analiza estas canciones y dime las fortalezas y potencial del usuario: {prompt}"
-                        }]
-                    }]
-                }
-                
-                try:
-                    response = requests.post(url, json=payload)
-                    data = response.json()
+        try:
+            # Inicializar el cliente de Groq
+            client = Groq(api_key=api_key)
+            
+            with st.chat_message("assistant"):
+                with st.spinner("Groq está analizando tu sintonía..."):
+                    # Llamada al modelo Llama 3 (uno de los mejores y más rápidos)
+                    completion = client.chat.completions.create(
+                        model="llama-3.3-70b-versatile",
+                        messages=[
+                            {
+                                "role": "system",
+                                "content": "Eres un experto en psicología musical y potencial personal. Analiza las canciones del usuario para identificar fortalezas y estado emocional. Tono motivador e inspirador."
+                            },
+                            {
+                                "role": "user",
+                                "content": prompt
+                            }
+                        ],
+                    )
+                    
+                    texto_ia = completion.choices[0].message.content
+                    st.markdown(texto_ia)
+                    st.session_state.messages.append({"role": "assistant", "content": texto_ia})
 
-                    # Verificamos si Google devolvió un error de seguridad o de clave
-                    if 'error' in data:
-                        st.error(f"Google API Error: {data['error']['message']}")
-                    elif 'candidates' in data and data['candidates'][0]['content']['parts'][0]['text']:
-                        texto_ia = data['candidates'][0]['content']['parts'][0]['text']
-                        st.markdown(texto_ia)
-                        st.session_state.messages.append({"role": "assistant", "content": texto_ia})
-                    else:
-                        st.warning("Google no pudo generar una respuesta. Intenta con otras canciones.")
-                        st.write("Respuesta técnica para depurar:", data) # Esto nos dirá qué pasa realmente
-
-                except Exception as e:
-                    st.error(f"Error inesperado: {e}")
+        except Exception as e:
+            st.error(f"Error al conectar con Groq: {e}")
+            st.info("Asegúrate de que tu clave empieza por 'gsk_'")
