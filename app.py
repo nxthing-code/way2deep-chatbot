@@ -2,7 +2,7 @@ import streamlit as st
 import google.generativeai as genai
 from PIL import Image
 
-# --- 1️⃣ Configuración de la página
+# Configuración de la página
 st.set_page_config(page_title="Self-Discovery AI", page_icon="✨")
 st.title("✨ Descubre tu Máximo Potencial")
 st.markdown("""
@@ -10,7 +10,7 @@ Analiza tu vibración actual a través de la música.
 **Escribe tus canciones favoritas** o **sube una captura de pantalla** para descubrir tus fortalezas.
 """)
 
-# --- 2️⃣ Configura la API Key
+# Configura la API Key
 if "GOOGLE_API_KEY" not in st.secrets:
     st.warning("⚠️ Añade tu API Key en Streamlit Secrets como GOOGLE_API_KEY")
     st.stop()
@@ -18,19 +18,13 @@ if "GOOGLE_API_KEY" not in st.secrets:
 api_key = st.secrets["GOOGLE_API_KEY"]
 genai.configure(api_key=api_key, transport="rest")
 
-# --- 3️⃣ Seleccionar automáticamente el primer modelo disponible
-models = genai.list_models()
-available_models = [m.name for m in models]
-
-if not available_models:
-    st.error("❌ No hay modelos disponibles")
-    st.stop()
-
-selected_model_name = available_models[0]  # Elegimos el primero automáticamente
-st.sidebar.info(f"Usando modelo: {selected_model_name}")
+# --- Modelo compatible hardcodeado
+# Cambia esto solo si tu cuenta no tiene acceso
+selected_model_name = "gemini-1.5-flash-001"
 model = genai.GenerativeModel(selected_model_name)
+st.sidebar.info(f"Usando modelo: {selected_model_name}")
 
-# --- 4️⃣ Historial de chat
+# Historial de chat
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
@@ -38,14 +32,14 @@ for msg in st.session_state.messages:
     with st.chat_message(msg["role"]):
         st.markdown(msg["content"])
 
-# --- 5️⃣ Entrada de texto e imagen
+# Entrada de texto e imagen
 col1, col2 = st.columns([2, 1])
 with col1:
     user_input = st.chat_input("Escribe aquí tus canciones o pensamientos...")
 with col2:
     uploaded_file = st.file_uploader("Sube una captura 📸", type=["png", "jpg", "jpeg"])
 
-# --- 6️⃣ Procesar la solicitud
+# Procesar la solicitud
 if user_input or uploaded_file:
     content_text = user_input if user_input else "Aquí hay una imagen para analizar canciones."
     st.session_state.messages.append({"role": "user", "content": content_text})
