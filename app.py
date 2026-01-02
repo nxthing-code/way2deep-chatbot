@@ -30,17 +30,18 @@ if prompt := st.chat_input("Escribe aquí tus canciones favoritas..."):
         st.error("⚠️ Introduce tu API Key en la barra lateral.")
     else:
         try:
-            # CONFIGURACIÓN UNIVERSAL: Usamos gemini-pro (el más estable)
-            genai.configure(api_key=api_key)
-            model = genai.GenerativeModel('gemini-pro')
+            # --- SOLUCIÓN AL ERROR 404 ---
+            # Forzamos el uso de la API v1 (estable) y el transporte REST
+            genai.configure(api_key=api_key, transport='rest')
+            
+            # Usamos el nombre del modelo compatible con v1
+            model = genai.GenerativeModel('gemini-1.0-pro')
             
             with st.chat_message("assistant"):
                 with st.spinner("Interpretando tu sintonía musical..."):
-                    # Instrucciones simplificadas
                     instruccion = (
-                        "Eres un experto en psicología musical y potencial personal. "
-                        "Analiza las siguientes canciones escritas por el usuario para identificar "
-                        "sus fortalezas y estado emocional actual. Tono inspirador."
+                        "Eres un experto en psicología musical. Analiza estas canciones "
+                        "para identificar fortalezas y estado emocional. Tono inspirador."
                     )
                     
                     # Generar respuesta
@@ -52,4 +53,4 @@ if prompt := st.chat_input("Escribe aquí tus canciones favoritas..."):
         
         except Exception as e:
             st.error(f"Error de conexión: {e}")
-            st.info("Nota: Si aparece error 404, prueba a generar una nueva API Key en Google AI Studio.")
+            st.info("Si el error persiste, intenta crear una API Key nueva en un 'New Project' dentro de AI Studio.")
