@@ -3,29 +3,37 @@ import google.generativeai as genai
 from PIL import Image
 
 # --- 1️⃣ Configuración de la página
-st.set_page_config(page_title="Self‑Discovery AI", page_icon="✨")
+st.set_page_config(page_title="Self-Discovery AI", page_icon="✨")
 st.title("✨ Descubre tu Máximo Potencial")
 st.markdown("""
 Analiza tu vibración actual a través de la música.  
 **Escribe tus canciones favoritas** o **sube una captura de pantalla** para descubrir tus fortalezas.
 """)
 
-# --- 2️⃣ Leer API Key desde Secrets
-if "GOOGLE_API_KEY" in st.secrets:
-    api_key = st.secrets["GOOGLE_API_KEY"]
-    genai.configure(api_key=api_key, transport="rest")
-else:
+# --- 2️⃣ Configura la API Key
+if "GOOGLE_API_KEY" not in st.secrets:
     st.warning("⚠️ Añade tu API Key en Streamlit Secrets como GOOGLE_API_KEY")
     st.stop()
 
-# --- 3️⃣ Modelo compatible con generateContent
-try:
-    model = genai.GenerativeModel("gemini-1.5-flash-latest")
-except Exception as e:
-    st.error(f"Error al inicializar modelo: {e}")
+api_key = st.secrets["GOOGLE_API_KEY"]
+genai.configure(api_key=api_key, transport="rest")
+
+# --- 3️⃣ Listar modelos disponibles con generateContent
+st.sidebar.header("Selecciona modelo para generar contenido")
+available_models = []
+for m in genai.list_models():
+    # Solo mostrar modelos que soporten generateContent
+    if "generateContent" in m.supported_actions:
+        available_models.append(m.name)
+
+if not available_models:
+    st.error("❌ No hay modelos disponibles con soporte generateContent")
     st.stop()
 
-# --- 4️⃣ Historial de mensajes
+selected_model_name = st.sidebar.selectbox("Modelo:", available_models)
+model = genai.GenerativeModel(selected_model_name)
+
+# --- 4️⃣ Historial de chat
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
@@ -52,7 +60,6 @@ if user_input or uploaded_file:
 
     with st.chat_message("assistant"):
         with st.spinner("Analizando…"):
-            # Preparar instrucciones y prompt
             instruction = (
                 "Actúa como un guía de autoconocimiento. "
                 "Analiza las canciones para identificar emociones, fortalezas y consejos."
@@ -66,11 +73,10 @@ if user_input or uploaded_file:
                 contents.append("Analiza los nombres de canciones en la imagen.")
 
             try:
-                # 👉 Generar respuesta
+                # Generar respuesta
                 result = model.generate_content(contents)
                 answer = result.text if hasattr(result, "text") else str(result)
                 st.markdown(answer)
-
                 st.session_state.messages.append({"role": "assistant", "content": answer})
             except Exception as err:
                 st.error(f"Error al generar contenido: {err}")
